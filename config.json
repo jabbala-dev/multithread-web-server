@@ -1,0 +1,5 @@
+{
+    "port": 7878,
+    "thread_pool_size": 4,
+    "document_root": "./www"
+}

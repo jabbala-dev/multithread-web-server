@@ -5,20 +5,41 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
+use serde::Deserialize;
+
+
+#[derive(Deserialize)]
+struct Config {
+    port: u16,
+    thread_pool_size: usize,
+}
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let pool = ThreadPool::new(4);
+    let config = read_config("config.json").expect("Failed to read config file");
+
+    let address = format!("127.0.0.1:{}", config.port);
+    
+    let listener = TcpListener::bind(address).unwrap();
+    let pool = ThreadPool::new(config.thread_pool_size);
+
+    println!("Server running on port {}", config.port);
 
     for stream in listener.incoming().take(2) {
         let stream = stream.unwrap();
 
-        pool.execute(|| {
+
+        pool.execute(move || {
             handle_connection(stream);
         });
     }
 
     println!("Shutting down.");
+}
+
+fn read_config(filename: &str) -> Result<Config, Box<dyn std::error::Error>> {
+    let config_content = fs::read_to_string(filename)?;
+    let config: Config = serde_json::from_str(&config_content)?;
+    Ok(config)
 }
 
 fn handle_connection(mut stream: TcpStream) {
